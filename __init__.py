@@ -270,8 +270,7 @@ class GI_GamepadInputPanel(bpy.types.Panel):
         midi_keyframe_props = scene.midi_keyframe_props
         
         # Legacy: Install deps using pip - we keep deps as git submodules now
-        # row = layout.row()
-        # row.operator("wm.install_midi")
+        # layout.operator("wm.install_midi")
 
         layout.label(text="MIDI Settings", icon="OUTLINER_OB_SPEAKER")
         layout.prop(midi_keyframe_props, "midi_file")
