@@ -17,6 +17,8 @@ from bpy.props import (StringProperty,
                        FloatProperty,
                        EnumProperty,
                        PointerProperty,
+                       IntProperty,
+                       CollectionProperty,
                        )
 from bpy.types import (
                        PropertyGroup,
@@ -101,6 +103,117 @@ def selected_track_enum_callback(scene, context):
     
     return selected_tracks_raw
 
+# Key object item
+class KeyItem(PropertyGroup):
+    midi_id: EnumProperty(
+        name="MIDI ID",
+        description="Midi id to match object to midi signal",
+        items=[
+            ('21', "A0", ""),
+            ('22', "A#0/Bb0", ""),
+            ('23', "B0", ""),
+            ('24', "C1", ""),
+            ('25', "C#1/Db1", ""),
+            ('26', "D1", ""),
+            ('27', "D#1/Eb1", ""),
+            ('28', "E1", ""),
+            ('29', "F1", ""),
+            ('30', "F#1/Gb1", ""),
+            ('31', "G1", ""),
+            ('32', "G#1/Ab1", ""),
+            ('33', "A1", ""),
+            ('34', "A#1/Bb1", ""),
+            ('35', "B1", ""),
+            ('36', "C2", ""),
+            ('37', "C#2/Db2", ""),
+            ('38', "D2", ""),
+            ('39', "D#2/Eb2", ""),
+            ('40', "E2", ""),
+            ('41', "F2", ""),
+            ('42', "F#2/Gb2", ""),
+            ('43', "G2", ""),
+            ('44', "G#2/Ab2", ""),
+            ('45', "A2", ""),
+            ('46', "A#2/Bb2", ""),
+            ('47', "B2", ""),
+            ('48', "C3", ""),
+            ('49', "C#3/Db3", ""),
+            ('50', "D3", ""),
+            ('51', "D#3/Eb3", ""),
+            ('52', "E3", ""),
+            ('53', "F3", ""),
+            ('54', "F#3/Gb3", ""),
+            ('55', "G3", ""),
+            ('56', "G#3/Ab3", ""),
+            ('57', "A3", ""),
+            ('58', "A#3/Bb3", ""),
+            ('59', "B3", ""),
+            ('60', "C4 (Middle C)", ""),
+            ('61', "C#4/Db4", ""),
+            ('62', "D4", ""),
+            ('63', "D#4/Eb4", ""),
+            ('64', "E4", ""),
+            ('65', "F4", ""),
+            ('66', "F#4/Gb4", ""),
+            ('67', "G4", ""),
+            ('68', "G#4/Ab4", ""),
+            ('69', "A4 (Concert A)", ""),
+            ('70', "A#4/Bb4", ""),
+            ('71', "B4", ""),
+            ('72', "C5", ""),
+            ('73', "C#5/Db5", ""),
+            ('74', "D5", ""),
+            ('75', "D#5/Eb5", ""),
+            ('76', "E5", ""),
+            ('77', "F5", ""),
+            ('78', "F#5/Gb5", ""),
+            ('79', "G5", ""),
+            ('80', "G#5/Ab5", ""),
+            ('81', "A5", ""),
+            ('82', "A#5/Bb5", ""),
+            ('83', "B5", ""),
+            ('84', "C6", ""),
+            ('85', "C#6/Db6", ""),
+            ('86', "D6", ""),
+            ('87', "D#6/Eb6", ""),
+            ('88', "E6", ""),
+            ('89', "F6", ""),
+            ('90', "F#6/Gb6", ""),
+            ('91', "G6", ""),
+            ('92', "G#6/Ab6", ""),
+            ('93', "A6", ""),
+            ('94', "A#6/Bb6", ""),
+            ('95', "B6", ""),
+            ('96', "C7", ""),
+            ('97', "C#7/Db7", ""),
+            ('98', "D7", ""),
+            ('99', "D#7/Eb7", ""),
+            ('100', "E7", ""),
+            ('101', "F7", ""),
+            ('102', "F#7/Gb7", ""),
+            ('103', "G7", ""),
+            ('104', "G#7/Ab7", ""),
+            ('105', "A7", ""),
+            ('106', "A#7/Bb7", ""),
+            ('107', "B7", ""),
+            ('108', "C8", "")
+        ]    
+    )
+    obj: PointerProperty(
+        name="Object Reference",
+        type=bpy.types.Object,
+    )
+
+class KeyList(bpy.types.UIList):
+    def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
+        if self.layout_type in {'DEFAULT', 'COMPACT'}:
+            row = layout.row(heading="Key % s" % index)
+            row.prop(item, "midi_id", text="")
+            row.prop(item, "obj", text="")
+        elif self.layout_type == 'GRID':
+            layout.alignment = 'CENTER'
+            layout.prop(item.obj)
+
 # UI properties
 class GI_SceneProperties(PropertyGroup):
         
@@ -178,77 +291,18 @@ class GI_SceneProperties(PropertyGroup):
         description="Object that 'jumps' between key objects",
         type=bpy.types.Object,
         )
-    obj_c: PointerProperty(
-        name="C",
-        description="Object to be controlled",
-        type=bpy.types.Object,
-        )
-        
-    obj_d: PointerProperty(
-        name="D",
-        description="Object to be controlled",
-        type=bpy.types.Object,
-        )
-        
-    obj_e: PointerProperty(
-        name="E",
-        description="Object to be controlled",
-        type=bpy.types.Object,
-        )
-        
-    obj_f: PointerProperty(
-        name="F",
-        description="Object to be controlled",
-        type=bpy.types.Object,
-        )
-        
-    obj_g: PointerProperty(
-        name="G",
-        description="Object to be controlled",
-        type=bpy.types.Object,
-        )
-        
-    obj_a: PointerProperty(
-        name="A",
-        description="Object to be controlled",
-        type=bpy.types.Object,
-        )
-        
-    obj_b: PointerProperty(
-        name="B",
-        description="Object to be controlled",
-        type=bpy.types.Object,
-        )
-        
-    obj_csharp: PointerProperty(
-        name="C#",
-        description="Object to be controlled",
-        type=bpy.types.Object,
-        )
-        
-    obj_dsharp: PointerProperty(
-        name="D#",
-        description="Object to be controlled",
-        type=bpy.types.Object,
-        )
-    
-    obj_fsharp: PointerProperty(
-        name="F#",
-        description="Object to be controlled",
-        type=bpy.types.Object,
-        )
-    
-    obj_gsharp: PointerProperty(
-        name="G#",
-        description="Object to be controlled",
-        type=bpy.types.Object,
-        )
-    
-    obj_asharp: PointerProperty(
-        name="A#",
-        description="Object to be controlled",
-        type=bpy.types.Object,
-        )
+
+    keys: CollectionProperty(
+        name="Key Object List",
+        description="List of piano key objects to animate with midi events",
+        type=KeyItem,
+
+    )
+
+    selected_key: IntProperty(
+        name="Selected Key ID",
+        description="ID of selected key list item",
+    )
     
     # App State (not for user)
     initial_state = {}
@@ -296,18 +350,10 @@ class GI_GamepadInputPanel(bpy.types.Panel):
         layout.separator(factor=1.5)
         layout.label(text="Piano Keys", icon="OBJECT_DATAMODE")
         layout.operator("wm.assign_keys")
-        layout.prop(midi_keyframe_props, "obj_c", icon="EVENT_C")
-        layout.prop(midi_keyframe_props, "obj_d", icon="EVENT_D")
-        layout.prop(midi_keyframe_props, "obj_e", icon="EVENT_E")
-        layout.prop(midi_keyframe_props, "obj_f", icon="EVENT_F")
-        layout.prop(midi_keyframe_props, "obj_g", icon="EVENT_G")
-        layout.prop(midi_keyframe_props, "obj_a", icon="EVENT_A")
-        layout.prop(midi_keyframe_props, "obj_b", icon="EVENT_B")
-        layout.prop(midi_keyframe_props, "obj_csharp", icon="EVENT_C")
-        layout.prop(midi_keyframe_props, "obj_dsharp", icon="EVENT_D")
-        layout.prop(midi_keyframe_props, "obj_fsharp", icon="EVENT_F")
-        layout.prop(midi_keyframe_props, "obj_gsharp", icon="EVENT_G")
-        layout.prop(midi_keyframe_props, "obj_asharp", icon="EVENT_A")
+        row = layout.row()
+        row.operator("wm.add_key_item")
+        row.operator("wm.remove_key_item")
+        layout.template_list("KeyList", "key-list", midi_keyframe_props, "keys", midi_keyframe_props, "selected_key")
 
         layout.separator(factor=1.5)
         layout.label(text="Other Objects", icon="OBJECT_HIDDEN")
@@ -617,6 +663,32 @@ class GI_generate_jumping_animation(bpy.types.Operator):
 
         return {"FINISHED"}
 
+class AddKeyItem(bpy.types.Operator):
+    """Key Collection Add Item"""
+    bl_idname = "wm.add_key_item"
+    bl_label = "Add Key"
+    bl_description = "Adds item to keys list"
+
+    def execute(self, context: bpy.types.Context):
+        keys = context.scene.midi_keyframe_props.keys
+        keys.add()
+        return {"FINISHED"}
+
+class RemoveKeyItem(bpy.types.Operator):
+    """Key Collection Remove Item"""
+    bl_idname = "wm.remove_key_item"
+    bl_label = "Remove Key"
+    bl_description = "Removes item from keys list"
+
+    def execute(self, context: bpy.types.Context):
+        keys = context.scene.midi_keyframe_props.keys
+        selected = context.scene.midi_keyframe_props.selected_key
+        try:
+            keys.remove(selected)
+        except NameError:
+            self.report({'INFO'}, 'Select item to remove from list.')
+        return {"FINISHED"}
+
 # Animates objects up and down like piano keys
 def animate_keys(context, note_letter, octave: int, real_keyframe, pressed, has_release, prev_keyframe, prev_note):
     midi_keyframe_props = context.scene.midi_keyframe_props
@@ -730,13 +802,17 @@ def animate_jump(context, note_letter, octave, real_keyframe, pressed, has_relea
 
 # Load/unload addon into Blender
 classes = (
+    KeyItem,
+    KeyList,
     GI_SceneProperties,
     GI_GamepadInputPanel,
     GI_install_midi,
     GI_generate_piano_animation,
     GI_generate_jumping_animation,
     GI_assign_keys,
-    GI_delete_all_keyframes
+    GI_delete_all_keyframes,
+    AddKeyItem,
+    RemoveKeyItem,
 )
 
 def register():
