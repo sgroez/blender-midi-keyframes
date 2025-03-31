@@ -30,7 +30,6 @@ import os
 
 # Constants
 
-midi_note_map = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
 DEFAULT_TEMPO = 500000
 
 # Global state
@@ -60,13 +59,9 @@ def selected_track_enum_callback(scene, context):
 
     midi_keyframe_props = context.scene.midi_keyframe_props
     midi_file_path = midi_keyframe_props.midi_file
-
-    # Check input and ensure it's actually MIDI
-    is_midi_file = ".mid" in midi_file_path
-    # TODO: Return error to user somehow??
-    if not is_midi_file:
+    
+    if not has_valid_midi_file(context):
         return []
-        
 
     # Have we already scanned this file? Check the "cache"
     if midi_file_loaded == midi_file_path:
@@ -105,110 +100,27 @@ def selected_track_enum_callback(scene, context):
 
 # Key object item
 class KeyItem(PropertyGroup):
-    midi_id: EnumProperty(
-        name="MIDI ID",
-        description="Midi id to match object to midi signal",
-        items=[
-            ('21', "A0", ""),
-            ('22', "A#0/Bb0", ""),
-            ('23', "B0", ""),
-            ('24', "C1", ""),
-            ('25', "C#1/Db1", ""),
-            ('26', "D1", ""),
-            ('27', "D#1/Eb1", ""),
-            ('28', "E1", ""),
-            ('29', "F1", ""),
-            ('30', "F#1/Gb1", ""),
-            ('31', "G1", ""),
-            ('32', "G#1/Ab1", ""),
-            ('33', "A1", ""),
-            ('34', "A#1/Bb1", ""),
-            ('35', "B1", ""),
-            ('36', "C2", ""),
-            ('37', "C#2/Db2", ""),
-            ('38', "D2", ""),
-            ('39', "D#2/Eb2", ""),
-            ('40', "E2", ""),
-            ('41', "F2", ""),
-            ('42', "F#2/Gb2", ""),
-            ('43', "G2", ""),
-            ('44', "G#2/Ab2", ""),
-            ('45', "A2", ""),
-            ('46', "A#2/Bb2", ""),
-            ('47', "B2", ""),
-            ('48', "C3", ""),
-            ('49', "C#3/Db3", ""),
-            ('50', "D3", ""),
-            ('51', "D#3/Eb3", ""),
-            ('52', "E3", ""),
-            ('53', "F3", ""),
-            ('54', "F#3/Gb3", ""),
-            ('55', "G3", ""),
-            ('56', "G#3/Ab3", ""),
-            ('57', "A3", ""),
-            ('58', "A#3/Bb3", ""),
-            ('59', "B3", ""),
-            ('60', "C4 (Middle C)", ""),
-            ('61', "C#4/Db4", ""),
-            ('62', "D4", ""),
-            ('63', "D#4/Eb4", ""),
-            ('64', "E4", ""),
-            ('65', "F4", ""),
-            ('66', "F#4/Gb4", ""),
-            ('67', "G4", ""),
-            ('68', "G#4/Ab4", ""),
-            ('69', "A4 (Concert A)", ""),
-            ('70', "A#4/Bb4", ""),
-            ('71', "B4", ""),
-            ('72', "C5", ""),
-            ('73', "C#5/Db5", ""),
-            ('74', "D5", ""),
-            ('75', "D#5/Eb5", ""),
-            ('76', "E5", ""),
-            ('77', "F5", ""),
-            ('78', "F#5/Gb5", ""),
-            ('79', "G5", ""),
-            ('80', "G#5/Ab5", ""),
-            ('81', "A5", ""),
-            ('82', "A#5/Bb5", ""),
-            ('83', "B5", ""),
-            ('84', "C6", ""),
-            ('85', "C#6/Db6", ""),
-            ('86', "D6", ""),
-            ('87', "D#6/Eb6", ""),
-            ('88', "E6", ""),
-            ('89', "F6", ""),
-            ('90', "F#6/Gb6", ""),
-            ('91', "G6", ""),
-            ('92', "G#6/Ab6", ""),
-            ('93', "A6", ""),
-            ('94', "A#6/Bb6", ""),
-            ('95', "B6", ""),
-            ('96', "C7", ""),
-            ('97', "C#7/Db7", ""),
-            ('98', "D7", ""),
-            ('99', "D#7/Eb7", ""),
-            ('100', "E7", ""),
-            ('101', "F7", ""),
-            ('102', "F#7/Gb7", ""),
-            ('103', "G7", ""),
-            ('104', "G#7/Ab7", ""),
-            ('105', "A7", ""),
-            ('106', "A#7/Bb7", ""),
-            ('107', "B7", ""),
-            ('108', "C8", "")
-        ]    
+    name: StringProperty(
+        name="Note Name",
+        description="Name of the key's playing note",
     )
     obj: PointerProperty(
         name="Object Reference",
+        description="Reference to the key 3d object",
         type=bpy.types.Object,
     )
 
 class KeyList(bpy.types.UIList):
+    bl_label = "UIList for Keymapping"
+    bl_idname = "KeyList"
+    bl_space_type = 'PROPERTIES'
+    bl_region_type = 'WINDOW'
+    bl_context = "object"
+
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
         if self.layout_type in {'DEFAULT', 'COMPACT'}:
-            row = layout.row(heading="Key % s" % index)
-            row.prop(item, "midi_id", text="")
+            row = layout.row()
+            row.label(text=item.name)
             row.prop(item, "obj", text="")
         elif self.layout_type == 'GRID':
             layout.alignment = 'CENTER'
@@ -350,9 +262,7 @@ class GI_GamepadInputPanel(bpy.types.Panel):
         layout.separator(factor=1.5)
         layout.label(text="Piano Keys", icon="OBJECT_DATAMODE")
         layout.operator("wm.assign_keys")
-        row = layout.row()
-        row.operator("wm.add_key_item")
-        row.operator("wm.remove_key_item")
+        layout.operator("wm.initialise_key_list")
         layout.template_list("KeyList", "key-list", midi_keyframe_props, "keys", midi_keyframe_props, "selected_key")
 
         layout.separator(factor=1.5)
@@ -383,60 +293,14 @@ class GI_install_midi(bpy.types.Operator):
         return {"FINISHED"}
     
 # Shared helper functions
-def get_note_obj(midi_keyframe_props, noteLetter):
-    if noteLetter == "C":
-        return midi_keyframe_props.obj_c
-    if noteLetter == "D":
-        return midi_keyframe_props.obj_d
-    if noteLetter == "E":
-        return midi_keyframe_props.obj_e
-    if noteLetter == "F":
-        return midi_keyframe_props.obj_f
-    if noteLetter == "G":
-        return midi_keyframe_props.obj_g
-    if noteLetter == "A":
-        return midi_keyframe_props.obj_a
-    if noteLetter == "B":
-        return midi_keyframe_props.obj_b
-    if noteLetter == "C#":
-        return midi_keyframe_props.obj_csharp
-    if noteLetter == "D#":
-        return midi_keyframe_props.obj_dsharp
-    if noteLetter == "F#":
-        return midi_keyframe_props.obj_fsharp
-    if noteLetter == "G#":
-        return midi_keyframe_props.obj_gsharp
-    if noteLetter == "A#":
-        return midi_keyframe_props.obj_asharp
+def get_note_key(midi_keyframe_props, midi_note):
+    keys = midi_keyframe_props.keys
+    if len(keys) > midi_note - 21:
+        note_key = keys[midi_note - 21]
+        return note_key
     return None
-    
-def replace_note_obj(midi_keyframe_props, noteLetter, new_obj):
-    if noteLetter == "C":
-        midi_keyframe_props.obj_c = new_obj
-    if noteLetter == "D":
-        midi_keyframe_props.obj_d = new_obj
-    if noteLetter == "E":
-        midi_keyframe_props.obj_e = new_obj
-    if noteLetter == "F":
-        midi_keyframe_props.obj_f = new_obj
-    if noteLetter == "G":
-        midi_keyframe_props.obj_g = new_obj
-    if noteLetter == "A":
-        midi_keyframe_props.obj_a = new_obj
-    if noteLetter == "B":
-        midi_keyframe_props.obj_b = new_obj
-    if noteLetter == "C#":
-        midi_keyframe_props.obj_csharp = new_obj
-    if noteLetter == "D#":
-        midi_keyframe_props.obj_dsharp = new_obj
-    if noteLetter == "F#":
-        midi_keyframe_props.obj_fsharp = new_obj
-    if noteLetter == "G#":
-        midi_keyframe_props.obj_gsharp = new_obj
-    if noteLetter == "A#":
-        midi_keyframe_props.obj_asharp = new_obj
 
-def check_for_midi_file(context):
+def has_valid_midi_file(context) -> bool:
         midi_keyframe_props = context.scene.midi_keyframe_props
         midi_file_path = midi_keyframe_props.midi_file
 
@@ -444,19 +308,12 @@ def check_for_midi_file(context):
         is_midi_file = ".mid" in midi_file_path
         # TODO: Return error to user somehow??
         if not is_midi_file:
-            return {"FINISHED"}
+            return False
+        return True
 
-def get_note_letter(note):
-    # Figure out the actual note "letter" (e.g. C, C#, etc)
-    # Get the octave
-    octave = round(note / 12)
-    # MIDI note number = current octave * 12 + the note index (0-11)
-    octave_offset = octave * 12
-    note_index = note - octave_offset
-    note_letter = midi_note_map[note_index]
-    # print("Note: {}{}".format(note_letter, octave))
-
-    return note_letter, octave
+def get_note_octave(midi_note):
+    octave = round(midi_note / 12)
+    return octave
 
 class ParsedMidiFile:
     total_time = 0
@@ -518,7 +375,7 @@ class ParsedMidiFile:
                 released = True if msg.type == "note_off" else False
 
                 # Figure out the actual note "letter" (e.g. C, C#, etc)
-                note_letter, octave = get_note_letter(msg.note)
+                octave = get_note_octave(msg.note)
                 
                 # Increment time
                 time += msg.time
@@ -532,10 +389,10 @@ class ParsedMidiFile:
 
                 real_keyframe = (real_time * fps) + 1
 
-                key_callback(context, note_letter, octave, real_keyframe, pressed, self.has_release, last_keyframe, last_note)
+                key_callback(context, msg.note, octave, real_keyframe, pressed, self.has_release, last_keyframe, last_note)
 
                 last_keyframe = real_keyframe
-                last_note = note_letter
+                last_note = msg.note
 
 class GI_generate_piano_animation(bpy.types.Operator):
     """Generate animation"""
@@ -551,7 +408,8 @@ class GI_generate_piano_animation(bpy.types.Operator):
         axis = int(midi_keyframe_props.axis)
 
         # Is it a MIDI file? If not, bail early
-        check_for_midi_file(context)
+        if not has_valid_midi_file(context):
+            return {"FINISHED"}
 
 
         # Import the MIDI file
@@ -565,21 +423,22 @@ class GI_generate_piano_animation(bpy.types.Operator):
         #         print(msg)
 
         # Get initial positions for each key
-        for note_letter in midi_note_map:
+        for key in context.scene.midi_keyframe_props.keys:
             # Get the right object corresponding to the note
-            move_obj = get_note_obj(midi_keyframe_props, note_letter)
+            key_name = key.name
+            move_obj = key.obj
             if move_obj == None:
                 continue
             
             match animation_type:
                 case "MOVE":
-                    midi_keyframe_props.initial_state[note_letter] = move_obj.location[axis]
+                    midi_keyframe_props.initial_state[key_name] = move_obj.location[axis]
 
                 case "SCALE":
-                    midi_keyframe_props.initial_state[note_letter] = move_obj.scale.x
+                    midi_keyframe_props.initial_state[key_name] = move_obj.scale.x
                     
                 case "ROTATE":
-                    midi_keyframe_props.initial_state[note_letter] = move_obj.rotation_euler[axis]
+                    midi_keyframe_props.initial_state[key_name] = move_obj.rotation_euler[axis]
 
         # Loop over each music note and animate corresponding keys
         midi_file.for_each_key(context, animate_keys)
@@ -599,8 +458,8 @@ class GI_delete_all_keyframes(bpy.types.Operator):
     def execute(self, context: bpy.types.Context):
         midi_keyframe_props = context.scene.midi_keyframe_props
 
-        for note_letter in midi_note_map:
-            note_obj = get_note_obj(midi_keyframe_props, note_letter)
+        for key in midi_keyframe_props.keys:
+            note_obj = key.obj
             if note_obj == None:
                 continue
             note_obj.animation_data_clear()
@@ -621,9 +480,11 @@ class GI_assign_keys(bpy.types.Operator):
         for check_obj in context.collection.all_objects:
             obj_name_split = check_obj.name.split(".")
             obj_name_key = obj_name_split[-1]
-            for note in midi_note_map:
-                if note == obj_name_key:
-                    replace_note_obj(midi_keyframe_props, note, check_obj)
+            for key in midi_keyframe_props.keys:
+                names = key.name.split("/")
+                for name in names:
+                    if name == obj_name_key:
+                        key.obj = check_obj
 
         return {"FINISHED"}
 
@@ -639,7 +500,8 @@ class GI_generate_jumping_animation(bpy.types.Operator):
         selected_track = midi_keyframe_props.selected_track
 
         # Is it a MIDI file? If not, bail early
-        check_for_midi_file(context)
+        if not has_valid_midi_file(context):
+            return {"FINISHED"}
 
         # Do we have an object to move?
         if midi_keyframe_props.obj_jump == None:
@@ -663,34 +525,114 @@ class GI_generate_jumping_animation(bpy.types.Operator):
 
         return {"FINISHED"}
 
-class AddKeyItem(bpy.types.Operator):
-    """Key Collection Add Item"""
-    bl_idname = "wm.add_key_item"
-    bl_label = "Add Key"
-    bl_description = "Adds item to keys list"
+class InitialiseKeyList(bpy.types.Operator):
+    """Key Collection Initialise List"""
+    bl_idname = "wm.initialise_key_list"
+    bl_label = "Initialise Key List"
+    bl_description = "Initialise keys list with object for all 88 piano keys"
+
+    midi_notes = [
+            ('21', "A0"),
+            ('22', "A#0/Bb0"),
+            ('23', "B0"),
+            ('24', "C1"),
+            ('25', "C#1/Db1"),
+            ('26', "D1"),
+            ('27', "D#1/Eb1"),
+            ('28', "E1"),
+            ('29', "F1"),
+            ('30', "F#1/Gb1"),
+            ('31', "G1"),
+            ('32', "G#1/Ab1"),
+            ('33', "A1"),
+            ('34', "A#1/Bb1"),
+            ('35', "B1"),
+            ('36', "C2"),
+            ('37', "C#2/Db2"),
+            ('38', "D2"),
+            ('39', "D#2/Eb2"),
+            ('40', "E2"),
+            ('41', "F2"),
+            ('42', "F#2/Gb2"),
+            ('43', "G2"),
+            ('44', "G#2/Ab2"),
+            ('45', "A2"),
+            ('46', "A#2/Bb2"),
+            ('47', "B2"),
+            ('48', "C3"),
+            ('49', "C#3/Db3"),
+            ('50', "D3"),
+            ('51', "D#3/Eb3"),
+            ('52', "E3"),
+            ('53', "F3"),
+            ('54', "F#3/Gb3"),
+            ('55', "G3"),
+            ('56', "G#3/Ab3"),
+            ('57', "A3"),
+            ('58', "A#3/Bb3"),
+            ('59', "B3"),
+            ('60', "C4"),
+            ('61', "C#4/Db4"),
+            ('62', "D4"),
+            ('63', "D#4/Eb4"),
+            ('64', "E4"),
+            ('65', "F4"),
+            ('66', "F#4/Gb4"),
+            ('67', "G4"),
+            ('68', "G#4/Ab4"),
+            ('69', "A4"),
+            ('70', "A#4/Bb4"),
+            ('71', "B4"),
+            ('72', "C5"),
+            ('73', "C#5/Db5"),
+            ('74', "D5"),
+            ('75', "D#5/Eb5"),
+            ('76', "E5"),
+            ('77', "F5"),
+            ('78', "F#5/Gb5"),
+            ('79', "G5"),
+            ('80', "G#5/Ab5"),
+            ('81', "A5"),
+            ('82', "A#5/Bb5"),
+            ('83', "B5"),
+            ('84', "C6"),
+            ('85', "C#6/Db6"),
+            ('86', "D6"),
+            ('87', "D#6/Eb6"),
+            ('88', "E6"),
+            ('89', "F6"),
+            ('90', "F#6/Gb6"),
+            ('91', "G6"),
+            ('92', "G#6/Ab6"),
+            ('93', "A6"),
+            ('94', "A#6/Bb6"),
+            ('95', "B6"),
+            ('96', "C7"),
+            ('97', "C#7/Db7"),
+            ('98', "D7"),
+            ('99', "D#7/Eb7"),
+            ('100', "E7"),
+            ('101', "F7"),
+            ('102', "F#7/Gb7"),
+            ('103', "G7"),
+            ('104', "G#7/Ab7"),
+            ('105', "A7"),
+            ('106', "A#7/Bb7"),
+            ('107', "B7"),
+            ('108', "C8")
+        ]
 
     def execute(self, context: bpy.types.Context):
         keys = context.scene.midi_keyframe_props.keys
-        keys.add()
-        return {"FINISHED"}
-
-class RemoveKeyItem(bpy.types.Operator):
-    """Key Collection Remove Item"""
-    bl_idname = "wm.remove_key_item"
-    bl_label = "Remove Key"
-    bl_description = "Removes item from keys list"
-
-    def execute(self, context: bpy.types.Context):
-        keys = context.scene.midi_keyframe_props.keys
-        selected = context.scene.midi_keyframe_props.selected_key
-        try:
-            keys.remove(selected)
-        except NameError:
-            self.report({'INFO'}, 'Select item to remove from list.')
+        #TODO add modal to warn before clearing keys list
+        keys.clear()
+        for midi_note in InitialiseKeyList.midi_notes:
+            key = keys.add()
+            key.name = midi_note[1]
         return {"FINISHED"}
 
 # Animates objects up and down like piano keys
-def animate_keys(context, note_letter, octave: int, real_keyframe, pressed, has_release, prev_keyframe, prev_note):
+def animate_keys(context, midi_note, octave: int, real_keyframe, pressed, has_release, prev_keyframe, prev_note):
     midi_keyframe_props = context.scene.midi_keyframe_props
     initial_state = midi_keyframe_props.initial_state
     animation_type = midi_keyframe_props.animation_type
@@ -709,22 +651,24 @@ def animate_keys(context, note_letter, octave: int, real_keyframe, pressed, has_
 
     # Keyframe generation
     # Get the right object corresponding to the note
-    move_obj = get_note_obj(midi_keyframe_props, note_letter)
+    key = get_note_key(midi_keyframe_props, midi_note)
+    key_name = key.name
+    move_obj = key.obj
     if move_obj == None:
         return
     
     # Save initial position as previous frame
     match animation_type:
         case "MOVE":
-            move_obj.location[axis] = initial_state[note_letter]
+            move_obj.location[axis] = initial_state[key_name]
             move_obj.keyframe_insert(data_path="location", frame=real_keyframe - 1)
 
         case "SCALE":
-            move_obj.scale = (initial_state[note_letter],initial_state[note_letter],initial_state[note_letter])
+            move_obj.scale = (initial_state[key_name],initial_state[key_name],initial_state[key_name])
             move_obj.keyframe_insert(data_path="scale", frame=real_keyframe - 1)
             
         case "ROTATE":
-            move_obj.rotation_euler[axis] = initial_state[note_letter]
+            move_obj.rotation_euler[axis] = initial_state[key_name]
             move_obj.keyframe_insert(data_path="rotation_euler", frame=real_keyframe - 1)
 
     # Move the object
@@ -733,18 +677,18 @@ def animate_keys(context, note_letter, octave: int, real_keyframe, pressed, has_
             # Position distance is negative for pressing (since we're in Z-axis going "down")
             # But it can be flipped by user preference
             reverse_direction = midi_keyframe_props.travel_distance * direction_factor
-            move_distance = reverse_direction + initial_state[note_letter] if pressed else initial_state[note_letter]
+            move_distance = reverse_direction + initial_state[key_name] if pressed else initial_state[key_name]
             move_obj.location[axis] = move_distance
             move_obj.keyframe_insert(data_path="location", frame=real_keyframe)
         case "SCALE":
             # Scale "distance" is positive for pressing
-            move_distance = midi_keyframe_props.travel_distance + initial_state[note_letter] if pressed else initial_state[note_letter]
+            move_distance = midi_keyframe_props.travel_distance + initial_state[key_name] if pressed else initial_state[key_name]
             move_obj.scale = (move_distance,move_distance,move_distance)
             move_obj.keyframe_insert(data_path="scale", frame=real_keyframe)
         case "ROTATE":
             # Rotation distance is positive for pressing
             reverse_direction = midi_keyframe_props.travel_distance * direction_factor
-            move_distance = reverse_direction + initial_state[note_letter] if pressed else initial_state[note_letter]
+            move_distance = reverse_direction + initial_state[key_name] if pressed else initial_state[key_name]
             move_obj.rotation_euler[axis] = math.radians(move_distance)
             move_obj.keyframe_insert(data_path="rotation_euler", frame=real_keyframe)
 
@@ -752,21 +696,21 @@ def animate_keys(context, note_letter, octave: int, real_keyframe, pressed, has_
     # TODO: Figure out proper "hold" time based on time scale
     match animation_type:
         case "MOVE":
-            move_obj.location[axis] = initial_state[note_letter]
+            move_obj.location[axis] = initial_state[key_name]
             move_obj.keyframe_insert(data_path="location", frame=real_keyframe + 10)
         case "SCALE":
-            move_obj.scale = (initial_state[note_letter],initial_state[note_letter],initial_state[note_letter])
+            move_obj.scale = (initial_state[key_name],initial_state[key_name],initial_state[key_name])
             move_obj.keyframe_insert(data_path="scale", frame=real_keyframe + 10)
         case "ROTATE":
-            move_obj.rotation_euler[axis] = initial_state[note_letter]
+            move_obj.rotation_euler[axis] = initial_state[key_name]
             move_obj.keyframe_insert(data_path="rotation_euler", frame=real_keyframe + 10)
 
 # Animates an object to "jump" between keys
-def animate_jump(context, note_letter, octave, real_keyframe, pressed, has_release, prev_keyframe, prev_note):
+def animate_jump(context, midi_note, octave, real_keyframe, pressed, has_release, prev_keyframe, prev_note):
     midi_keyframe_props = context.scene.midi_keyframe_props
     # Keyframe generation
     # Get the right object corresponding to the note
-    piano_key = get_note_obj(midi_keyframe_props, note_letter)
+    piano_key = get_note_key(midi_keyframe_props, midi_note).obj
     if piano_key == None:
         return
     
@@ -779,7 +723,7 @@ def animate_jump(context, note_letter, octave, real_keyframe, pressed, has_relea
         if prev_note != None:
             frame_between = int((real_keyframe - prev_keyframe) / 2) + prev_keyframe
             # print("Jumping!!: {} {} {}".format(real_keyframe, prev_keyframe, frame_between))
-            prev_piano_key = get_note_obj(midi_keyframe_props, prev_note)
+            prev_piano_key = get_note_key(midi_keyframe_props, prev_note).obj
             prev_piano_key_world_pos = prev_piano_key.matrix_world.to_translation()
             middle_distance_x = (piano_key_world_pos.x - prev_piano_key_world_pos.x)
             move_obj.location.x = prev_piano_key_world_pos.x + middle_distance_x
@@ -811,8 +755,7 @@ classes = (
     GI_generate_jumping_animation,
     GI_assign_keys,
     GI_delete_all_keyframes,
-    AddKeyItem,
-    RemoveKeyItem,
+    InitialiseKeyList,
 )
 
 def register():
